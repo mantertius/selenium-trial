@@ -1,3 +1,4 @@
+from email.policy import default
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -5,6 +6,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+from decouple import config
+USERNAME = config('USERNAME',default='')
+PASSWORD = config('PASSWORD',default='')
 _ent = Keys.ENTER
 def test_driver_manager_chrome():
     service = Service(executable_path=ChromeDriverManager().install())
@@ -13,9 +17,9 @@ def test_driver_manager_chrome():
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get("https://proradis.uncisal.edu.br")
     userInput = driver.find_element(by=By.NAME,value="username")
-    userInput.send_keys("manoel.terceiro")
+    userInput.send_keys(USERNAME)
     passInput = driver.find_element(By.NAME,"password")
-    passInput.send_keys("Mapeat123"+ Keys.ENTER)
+    passInput.send_keys(PASSWORD + Keys.ENTER)
     statusFind  = WebDriverWait(driver,timeout=3).until(lambda d: d.find_element(By.XPATH,'//*[@id="report_status_chzn"]')) 
     statusFind.click()
     statusFind = driver.find_element(By.XPATH,'//*[@id="report_status_chzn"]/div/div/input')
@@ -37,5 +41,6 @@ def test_driver_manager_chrome():
 
     checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
     getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
-
+    
+    #os proximos passos
 test_driver_manager_chrome()
