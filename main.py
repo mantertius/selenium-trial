@@ -1,4 +1,3 @@
-from email.policy import default
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -7,10 +6,18 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from decouple import config
+#pip install selenium 
+#pip install python-decouple
+#pip install webdriver-manager
+
 USERNAME = config('USERNAME',default='')
 PASSWORD = config('PASSWORD',default='')
 _ent = Keys.ENTER
-def test_driver_manager_chrome():
+
+def login_proradis() -> webdriver:
+    """
+    Logs on proradis, using USERNAME
+    """
     service = Service(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
     chrome_options.add_experimental_option("detach",True)
@@ -20,6 +27,12 @@ def test_driver_manager_chrome():
     userInput.send_keys(USERNAME)
     passInput = driver.find_element(By.NAME,"password")
     passInput.send_keys(PASSWORD + Keys.ENTER)
+    return driver
+
+def get_Biradis(driver) -> webdriver:
+    """
+    Downloads BIRADS list at set range.
+    """
     statusFind  = WebDriverWait(driver,timeout=3).until(lambda d: d.find_element(By.XPATH,'//*[@id="report_status_chzn"]')) 
     statusFind.click()
     statusFind = driver.find_element(By.XPATH,'//*[@id="report_status_chzn"]/div/div/input')
@@ -42,5 +55,26 @@ def test_driver_manager_chrome():
     checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
     getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
     
-    #os proximos passos
-test_driver_manager_chrome()
+def get_Biopsy(driver) -> webdriver:
+    """
+    Download core biopsy of today.
+    """
+    searchType = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.NAME,'busca-por'))
+    id = searchType.get_attribute('id')
+    fullId = '//*[@id="'+id+'_chzn"]'#/div/div/input'
+    searchType = driver.find_element(By.XPATH,fullId)
+    print(fullId)
+    xPathSelecter = '/html/body/div[2]/div[2]/div[2]/form/div[1]/div[1]/div[1]/div[1]/a'
+    selector = driver.find_element(By.XPATH,xPathSelecter).click()
+    #breakpoint() #//*[@id="selMDC_chzn"]/div/div/input
+    searchType.send_keys('exame')
+    examName = driver.find_element(By.XPATH,'//*[@id="selQ6A_chzn"]/div/div/input')
+    examName.send_keys('PUNCAO'+_ent)
+
+    checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
+    getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
+
+    return driver
+
+driver = login_proradis()
+driver = get_Biopsy(driver)
