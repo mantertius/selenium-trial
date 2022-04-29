@@ -87,21 +87,27 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(_ent)
     driver.implicitly_wait(20)
     WebDriverWait(driver,3,5,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
+    
+    originalWindow = driver.current_window_handle
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
     driver.execute_script("arguments[0].click();",weirdClass)
-    #driver.execute_script(a)
-    
-    
-    #driver.find_element(By.XPATH,'//*[@title="Documentação"]').click()
-    #at this point, we enter the Documentação 
-    #TODO find a way to enter the laudo using XPATH or something else.
+
+    #at this point, we enter the Laudo 
+    #breakpoint()
+    for window_handle in driver.window_handles:
+        if window_handle != originalWindow:
+            driver.switch_to.window(window_handle)
+            print("Window Changed!")
+            break
+
+    WebDriverWait(driver,5,5).until(lambda d: driver.find_element(By.XPATH,'//*[@id="report-editor"]').is_displayed())
+    neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
+    patName = driver.find_element(By.XPATH,'//*[contains(text(), "PACS")]').get_attribute('text') #TODO get name from PACS and strip to get only the name
+    print(patName) 
     breakpoint()
-    WebDriverWait(driver,5,5).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
-    neglectResponsible = driver.find_element(By.XPATH,"//a[@title='Fechar']").click()
-    patName = driver.find_element(By.XPATH,'//*[@id="pat_name"]').get_attribute('text')
-    addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button/i')
+    addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button')
+    WebDriverWait(driver,3,2).until(driver.find_element(By.XPATH,'//*[@id="dropzone-master"]').is_displayed())
     dropzone = driver.find_element(By.XPATH,'//*[@id="dropzone-master"]').send_keys()
-    # breakpoint()
 
 
 
