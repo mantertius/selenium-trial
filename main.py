@@ -7,6 +7,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 from decouple import config
+import re
+import os
 #pip install selenium 
 #pip install python-decouple
 #pip install webdriver-manager
@@ -93,21 +95,21 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     driver.execute_script("arguments[0].click();",weirdClass)
 
     #at this point, we enter the Laudo 
-    #breakpoint()
     for window_handle in driver.window_handles:
         if window_handle != originalWindow:
             driver.switch_to.window(window_handle)
             print("Window Changed!")
             break
-
     WebDriverWait(driver,5,5).until(lambda d: driver.find_element(By.XPATH,'//*[@id="report-editor"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
-    patName = driver.find_element(By.XPATH,'//*[contains(text(), "PACS")]').get_attribute('text') #TODO get name from PACS and strip to get only the name
-    print(patName) 
+    innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
+    result = re.search(re.escape('PACS: ')+"(.*)"+re.escape('</small></span> <br><span><small>'), innerHTML)
+    patName = result[0].split('</small>')[0].split('PACS: ')[1].strip()
+    
+    addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
+    WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     breakpoint()
-    addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button')
-    WebDriverWait(driver,3,2).until(driver.find_element(By.XPATH,'//*[@id="dropzone-master"]').is_displayed())
-    dropzone = driver.find_element(By.XPATH,'//*[@id="dropzone-master"]').send_keys()
+    dropzone = driver.find_element(By.ID,'dropzone-master').send_keys(os.path.abspath("C:\Users\manoel.terceiro\Documents\Lightshot\density.png"))
 
 
 
