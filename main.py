@@ -1,3 +1,5 @@
+from importlib.resources import path
+import string
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -16,6 +18,43 @@ import os
 USERNAME = config('USERNAME',default='')
 PASSWORD = config('PASSWORD',default='')
 _ent = Keys.ENTER
+
+#this string will add an inputable element and will handle 
+JS_DROP_FILE = """
+    var target = arguments[0],
+        offsetX = arguments[1],
+        offsetY = arguments[2],
+        document = target.ownerDocument || document,
+        window = document.defaultView || window;
+
+    var input = document.createElement('INPUT');
+    input.type = 'file';
+    input.onchange = function () {
+      var rect = target.getBoundingClientRect(),
+          x = rect.left + (offsetX || (rect.width >> 1)),
+          y = rect.top + (offsetY || (rect.height >> 1)),
+          dataTransfer = { files: this.files };
+
+      ['dragenter', 'dragover', 'drop'].forEach(function (name) {
+        var evt = document.createEvent('MouseEvent');
+        evt.initMouseEvent(name, !0, !0, window, 0, 0, 0, x, y, !1, !1, !1, !1, 0, null);
+        evt.dataTransfer = dataTransfer;
+        target.dispatchEvent(evt);
+      });
+
+      setTimeout(function () { document.body.removeChild(input); }, 25);
+    };
+    document.body.appendChild(input);
+    return input;
+"""
+
+def drag_and_drop_file(drop_target, path):
+    '''INPUT INJECTION'''
+    driver = drop_target.parent
+    file_input = driver.execute_script(JS_DROP_FILE, drop_target, 0, 0)
+    file_input.send_keys(path)
+
+
 
 def login_proradis() -> webdriver.Chrome:
     """
@@ -108,9 +147,11 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     
     addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
     WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
-    breakpoint()
-    dropzone = driver.find_element(By.ID,'dropzone-master').send_keys(os.path.abspath("C:\Users\manoel.terceiro\Documents\Lightshot\density.png"))
-
+    dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
+    #breakpoint()
+    initPath = r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
+    drag_and_drop_file(dropzone, initPath+patName)
+    
 
 
 driver = login_proradis()
