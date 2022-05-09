@@ -1,5 +1,3 @@
-from importlib.resources import path
-import string
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -123,8 +121,13 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
     dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]')
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]')
-    dateInit.send_keys('27/04/2022')#input('Coloque a data de inicio formatada dd/mm/aaaa:'))
-    dateEnd.send_keys('27/04/2022')#input('Coloque a data de fim formatada dd/mm/aaaa:') + _ent)
+    date = input('Coloque a data formatada [dd/mm/aaaa]:').strip()
+    date = date.split('/')
+    day = date[0]
+    month = date[1]
+    year = date[2]
+    dateInit.send_keys(date)
+    dateEnd.send_keys(date)
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(_ent)
     driver.implicitly_wait(20)
     WebDriverWait(driver,3,5,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
@@ -149,7 +152,8 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
     #breakpoint()
-    initPath = r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
+    initPath = r'\\172.19.0.2\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
+    path = initPath+f'\{year}\{'
     drag_and_drop_file(dropzone, initPath+patName)
     
 
