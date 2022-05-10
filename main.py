@@ -15,7 +15,7 @@ import os
 
 USERNAME = config('USERNAME',default='')
 PASSWORD = config('PASSWORD',default='')
-_ent = Keys.ENTER
+ENTER = Keys.ENTER
 
 #this string will add an inputable element and will handle 
 JS_DROP_FILE = """
@@ -79,18 +79,18 @@ def get_Biradis(driver:webdriver.Chrome) -> webdriver.Chrome:
     print(statusFind.accessible_name)
     statusFind.send_keys("laudados" + Keys.ENTER)
     fluxoFinder = driver.find_element(By.XPATH,'//*[@id="filtros"]/div[4]/div/span[2]/span[1]/span')
-    fluxoFinder.send_keys("birads 0" + _ent)
+    fluxoFinder.send_keys("birads 0" + ENTER)
     driver.implicitly_wait(.3)
-    fluxoFinder.send_keys("birads 3" + _ent)
-    fluxoFinder.send_keys("birads 4" + _ent)
-    fluxoFinder.send_keys("birads 5" + _ent)
-    fluxoFinder.send_keys("birads 6" + _ent)
+    fluxoFinder.send_keys("birads 3" + ENTER)
+    fluxoFinder.send_keys("birads 4" + ENTER)
+    fluxoFinder.send_keys("birads 5" + ENTER)
+    fluxoFinder.send_keys("birads 6" + ENTER)
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
     dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]')
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]')
     dateInit.send_keys(input('Coloque a data de inicio formatada dd/mm/aaaa:'))
-    dateEnd.send_keys(input('Coloque a data de fim formatada dd/mm/aaaa:') + _ent)
-    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(_ent)
+    dateEnd.send_keys(input('Coloque a data de fim formatada dd/mm/aaaa:') + ENTER)
+    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
 
     checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
     getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
@@ -109,26 +109,45 @@ def get_Biopsy(driver:webdriver.Chrome) -> webdriver.Chrome:
     #breakpoint() #//*[@id="selMDC_chzn"]/div/div/input
     searchType.send_keys('exame')
     examName = driver.find_element(By.XPATH,'//*[@id="selQ6A_chzn"]/div/div/input')
-    examName.send_keys('PUNCAO'+_ent)
+    examName.send_keys('PUNCAO'+ ENTER)
 
     checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
     getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
 
     return driver
 
+def get_Month_Full_Path(month:int) -> str:
+    monthsPath = {'01':'01 - Janeiro', 
+              '02':'02 - Fevereiro',
+              '03':'03 - Março',
+              '04':'04 - Abril',
+              '05':'05 - Maio',
+              '06':'06 - Junho',
+              '07':'07 - Julho',
+              '08':'08 - Agosto',
+              '09':'09 - Setembro',
+              '10':'10 - Outubro',
+              '11':'11 - Novembro',
+              '12':'12 - Dezembro'}
+    return monthsPath[month]
+        
+
 def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     ecgRadial = driver.find_element(By.XPATH,'//*[@id="mod-ECG"]').click()
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
-    dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]')
-    dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]')
-    date = input('Coloque a data formatada [dd/mm/aaaa]:').strip()
-    date = date.split('/')
+    
+    date = input('Coloque a data formatada [dd/mm/aaaa]:')
+   
+    dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]').send_keys(date)
+    dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]').send_keys(date + ENTER)
+    date = date.strip().split('/')
     day = date[0]
     month = date[1]
     year = date[2]
-    dateInit.send_keys(date)
-    dateEnd.send_keys(date)
-    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(_ent)
+
+    breakpoint()
+
+    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
     driver.implicitly_wait(20)
     WebDriverWait(driver,3,5,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
@@ -142,6 +161,7 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
             driver.switch_to.window(window_handle)
             print("Window Changed!")
             break
+
     WebDriverWait(driver,5,5).until(lambda d: driver.find_element(By.XPATH,'//*[@id="report-editor"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
@@ -152,8 +172,9 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
     #breakpoint()
-    initPath = r'\\172.19.0.2\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
-    path = initPath+f'\{year}\{'
+    initPath = r'\\172.19.0.2\\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
+    
+    path = initPath+f'\\{year}\\{get_Month_Full_Path(month)}'
     drag_and_drop_file(dropzone, initPath+patName)
     
 
