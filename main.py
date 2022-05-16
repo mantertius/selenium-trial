@@ -147,7 +147,7 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
 
 
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
-    driver.implicitly_wait(20)
+    driver.implicitly_wait(30)
     WebDriverWait(driver,3,10,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
@@ -161,7 +161,6 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
             driver.switch_to.window(window_handle)
             print("Window Changed!")
             break;
-
     WebDriverWait(driver,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
     print('neglected')
@@ -178,7 +177,7 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     path = initPath+f'\\{year}\\{get_Month_Full_Path(month)}\\{day}\\'
     fullPath = path + patName+'.jpg'
     try:
-        #upload = drag_and_drop_file(dropzone, fullPath)
+        upload = drag_and_drop_file(dropzone, fullPath)
         breakpoint()
         leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
         addImage = driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div/div[2]/div[3]/div/div[2]/button[21]').click() 
@@ -195,5 +194,6 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
 
 
 driver = login_proradis()
+driver.maximize_window()
 #driver = get_Biopsy(driver)
 driver = send_Electro(driver)
