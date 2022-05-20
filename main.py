@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException, InvalidArgumentException
 from decouple import config
+from typing import Tuple
 import re
 import os
 #pip install selenium 
@@ -130,9 +131,9 @@ def get_Month_Full_Path(month:int) -> str:
               '11':'11 - Novembro',
               '12':'12 - Dezembro'}
     return monthsPath[month]
-        
 
-def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
+def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
+    driver.maximize_window()
     ecgRadial = driver.find_element(By.XPATH,'//*[@id="mod-ECG"]').click()
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
     
@@ -141,18 +142,17 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]').send_keys(date)
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]').send_keys(date)
     date = date.strip().split('/')
-    day = date[0]
-    month = date[1]
-    year = date[2]
-
 
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
-    driver.implicitly_wait(30)
+    driver.implicitly_wait(60)
     WebDriverWait(driver,3,10,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
-    #breakpoint()
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
+    procedures = []
+    # while True:
+    #     try:
+    # henrique deu a ideia de usar a lista de laudos pra conseguirmos entrar no proximo paciente...      
     driver.execute_script("arguments[0].click();",weirdClass)
 
     #at this point, we enter the Laudo 
@@ -161,13 +161,18 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
             driver.switch_to.window(window_handle)
             print("Window Changed!")
             break;
+    return send_Electro(driver,date)       
+
+def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
+    [day, month, year] = date
+    
     WebDriverWait(driver,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
     print('neglected')
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
     result = re.search(re.escape('PACS: ')+"(.*)"+re.escape('</small></span> <br><span><small>'), innerHTML)
     patName = result[0].split('</small>')[0].split('PACS: ')[1].strip()
-    
+    patName = patName.replace("^"," ").strip()
     addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
     WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
@@ -178,16 +183,19 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
     fullPath = path + patName+'.jpg'
     try:
         upload = drag_and_drop_file(dropzone, fullPath)
-        breakpoint()
         leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
+        driver.refresh()
+        neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
         addImage = driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div/div[2]/div[3]/div/div[2]/button[21]').click() 
-        upload = drag_and_drop_file(dropzone, fullPath)
+        dropzone2 = driver.find_element(By.ID,'dropzone-master')
+        upload2 = drag_and_drop_file(dropzone2, fullPath)
+        #breakpoint()
         leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
         print(f'Paciente {patName} finalizado. Indo para o próximo paciente.')
         if not driver.find_element(By.XPATH,'//*[@id="next"]').is_enabled():
             print('Lista de pacientes finalizada.')
-        driver.find_element(By.XPATH,'//*[@id="next"]').click()
-        send_Electro(driver)   
+        nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
+        send_Electro(driver,date) #ta dando erro no segunda chamada. de alguma forma, driver fica perdido.  
 
     except InvalidArgumentException:
         print(f'Paciente {patName} não encontrado')
@@ -196,4 +204,4 @@ def send_Electro(driver:webdriver.Chrome) -> webdriver.Chrome:
 driver = login_proradis()
 driver.maximize_window()
 #driver = get_Biopsy(driver)
-driver = send_Electro(driver)
+driver = enter_Laudo_ecg(driver)
