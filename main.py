@@ -5,9 +5,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import StaleElementReferenceException, InvalidArgumentException
+from selenium.common.exceptions import StaleElementReferenceException, InvalidArgumentException, ElementClickInterceptedException
 from decouple import config
 from typing import Tuple
+from rich import print
 import re
 import os
 #pip install selenium 
@@ -102,12 +103,12 @@ def get_Biopsy(driver:webdriver.Chrome) -> webdriver.Chrome:
     """
     searchType = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.NAME,'busca-por'))
     id = searchType.get_attribute('id')
-    fullId = '//*[@id="'+id+'_chzn"]'#/div/div/input'
+    fullId = '//*[@id="'+id+'_chzn"]'
     searchType = driver.find_element(By.XPATH,fullId)
     print(fullId)
     xPathSelecter = '/html/body/div[2]/div[2]/div[2]/form/div[1]/div[1]/div[1]/div[1]/a'
     selector = driver.find_element(By.XPATH,xPathSelecter).click()
-    #breakpoint() #//*[@id="selMDC_chzn"]/div/div/input
+
     searchType.send_keys('exame')
     examName = driver.find_element(By.XPATH,'//*[@id="selQ6A_chzn"]/div/div/input')
     examName.send_keys('PUNCAO'+ ENTER)
@@ -137,22 +138,18 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     ecgRadial = driver.find_element(By.XPATH,'//*[@id="mod-ECG"]').click()
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
     
-    date = '02/05/2022' #input('Coloque a data formatada [dd/mm/aaaa]:')
+    date = input('Coloque a data formatada [dd/mm/aaaa]:')
    
     dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]').send_keys(date)
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]').send_keys(date)
     date = date.strip().split('/')
 
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
-    driver.implicitly_wait(60)
+    driver.implicitly_wait(100)
     WebDriverWait(driver,3,10,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
-    procedures = []
-    # while True:
-    #     try:
-    # henrique deu a ideia de usar a lista de laudos pra conseguirmos entrar no proximo paciente...      
     driver.execute_script("arguments[0].click();",weirdClass)
 
     #at this point, we enter the Laudo 
@@ -176,32 +173,44 @@ def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
     addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
     WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
-    #breakpoint()
+
     initPath = r'\\172.19.0.2\\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
     
     path = initPath+f'\\{year}\\{get_Month_Full_Path(month)}\\{day}\\'
     fullPath = path + patName+'.jpg'
     try:
         upload = drag_and_drop_file(dropzone, fullPath)
-        leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
+        leaveDropzone(driver)
         driver.refresh()
         neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
         addImage = driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div/div[2]/div[3]/div/div[2]/button[21]').click() 
         dropzone2 = driver.find_element(By.ID,'dropzone-master')
         upload2 = drag_and_drop_file(dropzone2, fullPath)
-        #breakpoint()
-        leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
+        leaveDropzone(driver)
         print(f'Paciente {patName} finalizado. Indo para o próximo paciente.')
-        if not driver.find_element(By.XPATH,'//*[@id="next"]').is_enabled():
-            print('Lista de pacientes finalizada.')
-        nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
-        send_Electro(driver,date) #ta dando erro no segunda chamada. de alguma forma, driver fica perdido.  
-
+        driver.implicitly_wait(30)
+        nextArrow(driver)
+        send_Electro(driver,date)
     except InvalidArgumentException:
         print(f'Paciente {patName} não encontrado')
+        notfound.append(patName)
+        leaveDropzone(driver)
+        nextArrow(driver)
+        send_Electro(driver,date)
+    except ElementClickInterceptedException:
+        print('Lista de pacientes finalizada.')
+
+def leaveDropzone(driver):
+    leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
+
+def nextArrow(driver):
+    driver.find_element(By.XPATH,'//*[@id="next"]').is_enabled()
+    nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
 
 
 driver = login_proradis()
 driver.maximize_window()
 #driver = get_Biopsy(driver)
+notfound = []
 driver = enter_Laudo_ecg(driver)
+print(notfound)
