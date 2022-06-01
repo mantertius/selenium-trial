@@ -1,3 +1,5 @@
+import shutil
+from time import sleep
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -144,9 +146,10 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]').send_keys(date)
     date = date.strip().split('/')
 
-    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
-    driver.implicitly_wait(100)
-    WebDriverWait(driver,3,10,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
+    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').click()
+    sleep(5)
+    #driver.implicitly_wait(500)
+    WebDriverWait(driver,35,300,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
@@ -165,19 +168,20 @@ def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
     
     WebDriverWait(driver,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
-    print('neglected')
+    #print('neglected')
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
     result = re.search(re.escape('PACS: ')+"(.*)"+re.escape('</small></span> <br><span><small>'), innerHTML)
     patName = result[0].split('</small>')[0].split('PACS: ')[1].strip()
     patName = patName.replace("^"," ").strip()
     addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
-    WebDriverWait(driver,3,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
+    WebDriverWait(driver,10,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
     dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
 
     initPath = r'\\172.19.0.2\\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
     
     path = initPath+f'\\{year}\\{get_Month_Full_Path(month)}\\{day}\\'
-    fullPath = path + patName+'.jpg'
+    patNameJPG = patName+'.jpg'
+    fullPath = path + patNameJPG
     try:
         upload = drag_and_drop_file(dropzone, fullPath)
         leaveDropzone(driver)
@@ -188,11 +192,14 @@ def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
         upload2 = drag_and_drop_file(dropzone2, fullPath)
         leaveDropzone(driver)
         print(f'Paciente {patName} finalizado. Indo para o próximo paciente.')
+        done = path+'\\FINALIZADO\\'+patNameJPG
         driver.implicitly_wait(30)
+        finalizado[fullPath] = done
         nextArrow(driver)
         send_Electro(driver,date)
+        
     except InvalidArgumentException:
-        print(f'Paciente {patName} não encontrado')
+        print(f'Paciente {patName} não encontrado no armazenamento')
         notfound.append(patName)
         leaveDropzone(driver)
         nextArrow(driver)
@@ -207,10 +214,18 @@ def nextArrow(driver):
     driver.find_element(By.XPATH,'//*[@id="next"]').is_enabled()
     nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
 
+def moveDone(done:dict):
+    print(done)
+    for source,destination in done.items():
+        shutil.move(source,destination)
 
-driver = login_proradis()
-driver.maximize_window()
-#driver = get_Biopsy(driver)
-notfound = []
-driver = enter_Laudo_ecg(driver)
-print(notfound)
+
+if __name__ == '__main__':
+    driver = login_proradis()
+    driver.maximize_window()
+    #driver = get_Biopsy(driver)
+    notfound = []
+    finalizado = {}
+    driver = enter_Laudo_ecg(driver)
+    print(notfound)
+    moveDone(finalizado)
