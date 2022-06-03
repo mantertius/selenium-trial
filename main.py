@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import StaleElementReferenceException, InvalidArgumentException, ElementClickInterceptedException
+from selenium.common.exceptions import StaleElementReferenceException, InvalidArgumentException, ElementClickInterceptedException, TimeoutException
 from decouple import config
 from typing import Tuple
 from rich import print
@@ -147,8 +147,8 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     date = date.strip().split('/')
 
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').click()
-    sleep(5)
-    #driver.implicitly_wait(500)
+    sleep(1)
+    driver.implicitly_wait(10)
     WebDriverWait(driver,35,300,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
@@ -163,10 +163,10 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
             break;
     return send_Electro(driver,date)       
 
-def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
+def send_Electro(driver:webdriver.Chrome, date) -> str:
     [day, month, year] = date
-    
-    WebDriverWait(driver,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
+    driver.refresh()
+    WebDriverWait(driver,10,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
     #print('neglected')
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
@@ -192,7 +192,8 @@ def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
         upload2 = drag_and_drop_file(dropzone2, fullPath)
         leaveDropzone(driver)
         print(f'Paciente {patName} finalizado. Indo para o próximo paciente.')
-        done = path+'\\FINALIZADO\\'+patNameJPG
+        donePath = path + '\\FINALIZADO\\'
+        doneFullPath = donePath + patNameJPG
         driver.implicitly_wait(30)
         finalizado[fullPath] = done
         nextArrow(driver)
@@ -205,7 +206,9 @@ def send_Electro(driver:webdriver.Chrome, date) -> webdriver.Chrome:
         nextArrow(driver)
         send_Electro(driver,date)
     except ElementClickInterceptedException:
-        print('Lista de pacientes finalizada.')
+        print(f'Lista de pacientes finalizada.{len(finalizado)} finalizados. {len(notfound)} não encontrados.')
+    except TimeoutException:
+        print('Tempo de espera atingiu o limite.')
 
 def leaveDropzone(driver):
     leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
@@ -216,9 +219,19 @@ def nextArrow(driver):
 
 def moveDone(done:dict):
     print(done)
-    for source,destination in done.items():
-        shutil.move(source,destination)
-
+    try:
+        #done['\\\\172.19.0.2\\exames\\Eletrocardiografia\\2022\\06 - Junho\\02\\SANTINA FERREIRA DE LIMA.jpg']='\\\\172.19.0.2\\exames\\Eletrocardiografia\\2022\\06 - Junho\\02\\FINALIZADOS\\SANTINA FERREIRA DE LIMA.jpg'
+        fullpath = list(done.values())[0]
+        donePath = re.search('.+(?:FINALIZADO)', fullpath)
+        print(donePath[0])
+        print(fullpath)
+        if not os.path.exists(donePath[0]):
+            os.mkdir(donePath[0])
+        for source,destination in done.items():
+            shutil.move(source,destination)
+        print('{len(done)} pacientes movido para a pasta de finalizados.')
+    except IndexError:
+        print('Nenhum paciente foi finalizado')
 
 if __name__ == '__main__':
     driver = login_proradis()
