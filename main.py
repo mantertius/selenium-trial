@@ -21,7 +21,7 @@ USERNAME = config('USERNAME',default='')
 PASSWORD = config('PASSWORD',default='')
 ENTER = Keys.ENTER
 
-#this string will add an inputable element and will handle 
+#this string will add an inputable element and will handle the input
 JS_DROP_FILE = """
     var target = arguments[0],
         offsetX = arguments[1],
@@ -64,7 +64,8 @@ def login_proradis() -> webdriver.Chrome:
     """
     service = Service(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
-    chrome_options.add_experimental_option("detach",True)
+    chrome_options.add_argument("--headless")                                   #ENABLE THIS TO HIDE CHROME
+    #chrome_options.add_experimental_option("detach",True)                      #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get("https://proradis.uncisal.edu.br")
     userInput = driver.find_element(by=By.NAME,value="username")
@@ -147,7 +148,7 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     date = date.strip().split('/')
 
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').click()
-    sleep(1)
+    sleep(5)
     driver.implicitly_wait(10)
     WebDriverWait(driver,35,300,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
@@ -163,19 +164,18 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
             break;
     return send_Electro(driver,date)       
 
-def send_Electro(driver:webdriver.Chrome, date) -> str:
+def send_Electro(driver:webdriver.Chrome, date) -> None:
     [day, month, year] = date
     driver.refresh()
     WebDriverWait(driver,10,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
     neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
-    #print('neglected')
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
     result = re.search(re.escape('PACS: ')+"(.*)"+re.escape('</small></span> <br><span><small>'), innerHTML)
     patName = result[0].split('</small>')[0].split('PACS: ')[1].strip()
     patName = patName.replace("^"," ").strip()
     addAnnex = driver.find_element(By.XPATH,'//*[@id="left-panel"]/div[4]/div[8]/div[1]/button').click()
     WebDriverWait(driver,10,2).until(lambda d: driver.find_element(By.ID,'dropzone-master').is_displayed())
-    dropzone = driver.find_element(By.ID,'dropzone-master') #send_keys(os.path.abspath(r"C:\Users\manoel.terceiro\Pictures\e3j.jpg"))
+    dropzone = driver.find_element(By.ID,'dropzone-master')
 
     initPath = r'\\172.19.0.2\\exames-eletro' #r'\\172.19.0.2\exames-eletro\2022\04 - Abril\27'
     
@@ -195,7 +195,7 @@ def send_Electro(driver:webdriver.Chrome, date) -> str:
         donePath = path + '\\FINALIZADO\\'
         doneFullPath = donePath + patNameJPG
         driver.implicitly_wait(30)
-        finalizado[fullPath] = done
+        finalizado[fullPath] = doneFullPath
         nextArrow(driver)
         send_Electro(driver,date)
         
@@ -218,27 +218,28 @@ def nextArrow(driver):
     nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
 
 def moveDone(done:dict):
-    print(done)
     try:
-        #done['\\\\172.19.0.2\\exames\\Eletrocardiografia\\2022\\06 - Junho\\02\\SANTINA FERREIRA DE LIMA.jpg']='\\\\172.19.0.2\\exames\\Eletrocardiografia\\2022\\06 - Junho\\02\\FINALIZADOS\\SANTINA FERREIRA DE LIMA.jpg'
         fullpath = list(done.values())[0]
         donePath = re.search('.+(?:FINALIZADO)', fullpath)
-        print(donePath[0])
-        print(fullpath)
         if not os.path.exists(donePath[0]):
             os.mkdir(donePath[0])
         for source,destination in done.items():
             shutil.move(source,destination)
-        print('{len(done)} pacientes movido para a pasta de finalizados.')
+        print(f'{len(done)} pacientes movido para a pasta de finalizados.')
     except IndexError:
         print('Nenhum paciente foi finalizado')
 
 if __name__ == '__main__':
-    driver = login_proradis()
-    driver.maximize_window()
-    #driver = get_Biopsy(driver)
-    notfound = []
-    finalizado = {}
-    driver = enter_Laudo_ecg(driver)
-    print(notfound)
-    moveDone(finalizado)
+    
+    try:
+        driver = login_proradis()
+        driver.maximize_window()
+        #driver = get_Biopsy(driver)
+        notfound = []
+        finalizado = {}
+        driver = enter_Laudo_ecg(driver)
+        print('Não encontrados:')
+        print(notfound)
+        moveDone(finalizado)
+    except KeyboardInterrupt:
+        print('Programa finalizado com Crtl + C.')
