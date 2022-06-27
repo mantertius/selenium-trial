@@ -1,3 +1,4 @@
+from datetime import date as dt
 import shutil
 from time import sleep
 from selenium import webdriver
@@ -64,8 +65,8 @@ def login_proradis() -> webdriver.Chrome:
     """
     service = Service(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
-    chrome_options.add_argument("--headless")                                   #ENABLE THIS TO HIDE CHROME
-    #chrome_options.add_experimental_option("detach",True)                      #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
+    #chrome_options.add_argument("--headless")                                   #ENABLE THIS TO HIDE CHROME
+    #chrome_options.add_experimental_option("detach",True)                       #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get("https://proradis.uncisal.edu.br")
     userInput = driver.find_element(by=By.NAME,value="username")
@@ -142,11 +143,16 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
     
     date = input('Coloque a data formatada [dd/mm/aaaa]:')
-   
+
+    if date == 'hoje':
+        today = dt.today()
+        date = today.strftime("%d/%m/%Y")    
+    
     dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]').send_keys(date)
     dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]').send_keys(date)
+    
     date = date.strip().split('/')
-
+    
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').click()
     sleep(5)
     driver.implicitly_wait(10)
@@ -167,8 +173,8 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
 def send_Electro(driver:webdriver.Chrome, date) -> None:
     [day, month, year] = date
     driver.refresh()
-    WebDriverWait(driver,10,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
-    neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
+    WebDriverWait(driver,10,2).until(lambda d: driver.find_element(By.XPATH,'//*[@id="cancel_report"]').is_displayed())
+    neglect_responsible(driver)                                    #ENABLE THIS TO NEGLECT RESPONSIBLE
     innerHTML = driver.find_element(By.ID,"left-panel").get_attribute('innerHTML')
     result = re.search(re.escape('PACS: ')+"(.*)"+re.escape('</small></span> <br><span><small>'), innerHTML)
     patName = result[0].split('</small>')[0].split('PACS: ')[1].strip()
@@ -186,7 +192,7 @@ def send_Electro(driver:webdriver.Chrome, date) -> None:
         upload = drag_and_drop_file(dropzone, fullPath)
         leaveDropzone(driver)
         driver.refresh()
-        neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
+        neglect_responsible(driver)
         addImage = driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div/div[2]/div[3]/div/div[2]/button[21]').click() 
         dropzone2 = driver.find_element(By.ID,'dropzone-master')
         upload2 = drag_and_drop_file(dropzone2, fullPath)
@@ -209,6 +215,11 @@ def send_Electro(driver:webdriver.Chrome, date) -> None:
         print(f'Lista de pacientes finalizada.{len(finalizado)} finalizados. {len(notfound)} não encontrados.')
     except TimeoutException:
         print('Tempo de espera atingiu o limite.')
+        send_Electro(driver,date)
+
+def neglect_responsible(driver):
+    WebDriverWait(driver,10,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
+    neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
 
 def leaveDropzone(driver):
     leaveDropzone = driver.find_element(By.XPATH,'//*[@id="simplemodal-container"]/a').click()
@@ -231,15 +242,17 @@ def moveDone(done:dict):
 
 if __name__ == '__main__':
     
+    notfound = []
+    finalizado = {}
     try:
         driver = login_proradis()
         driver.maximize_window()
         #driver = get_Biopsy(driver)
-        notfound = []
-        finalizado = {}
         driver = enter_Laudo_ecg(driver)
         print('Não encontrados:')
         print(notfound)
         moveDone(finalizado)
     except KeyboardInterrupt:
+        print(notfound)
+        moveDone(finalizado)
         print('Programa finalizado com Crtl + C.')
