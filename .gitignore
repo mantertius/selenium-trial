@@ -1,4 +1,4 @@
 \selenium
 .env
 findings.md
-.pyc
+*.pyc
