@@ -1,10 +1,7 @@
-from binascii import a2b_qp
 from datetime import date as dt
 import shutil
-from sqlite3 import Time
 
 from time import sleep
-import traceback
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -71,7 +68,14 @@ def login_proradis() -> webdriver.Chrome:
     service = Service(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
     #chrome_options.add_argument("--headless")                                   #ENABLE THIS TO HIDE CHROME
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument("--ignore-certificate-errors")
+    prefs = {"download.default_directory" : "C:\Biradis"}
+    chrome_options.add_experimental_option("prefs",prefs)                        #ENABLE THIS TO ADJUST THE DOWNLOAD DIRECTORY
     #chrome_options.add_experimental_option("detach",True)                       #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
+    
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get("https://proradis.uncisal.edu.br")
     userInput = driver.find_element(by=By.NAME,value="username")
@@ -80,32 +84,60 @@ def login_proradis() -> webdriver.Chrome:
     passInput.send_keys(PASSWORD + Keys.ENTER)
     return driver
 
-def get_Biradis(driver:webdriver.Chrome) -> webdriver.Chrome:
+def get_Biradis(driver:webdriver.Chrome, count: int) -> webdriver.Chrome:
     """
     Downloads BIRADS list at set range.
     """
-    statusFind  = WebDriverWait(driver,timeout=3).until(lambda d: d.find_element(By.XPATH,'//*[@id="report_status_chzn"]')) 
-    statusFind.click()
-    statusFind = driver.find_element(By.XPATH,'//*[@id="report_status_chzn"]/div/div/input')
-    print(statusFind.accessible_name)
-    statusFind.send_keys("laudados" + Keys.ENTER)
-    fluxoFinder = driver.find_element(By.XPATH,'//*[@id="filtros"]/div[4]/div/span[2]/span[1]/span')
-    fluxoFinder.send_keys("birads 0" + ENTER)
-    driver.implicitly_wait(.3)
-    fluxoFinder.send_keys("birads 3" + ENTER)
-    fluxoFinder.send_keys("birads 4" + ENTER)
-    fluxoFinder.send_keys("birads 5" + ENTER)
-    fluxoFinder.send_keys("birads 6" + ENTER)
-    dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
-    dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]')
-    dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]')
-    dateInit.send_keys(input('Coloque a data de inicio formatada dd/mm/aaaa:'))
-    dateEnd.send_keys(input('Coloque a data de fim formatada dd/mm/aaaa:') + ENTER)
-    submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
-
-    checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
+    if count == 0:
+        driver.maximize_window()
+        statusFind  = WebDriverWait(driver,timeout=3).until(lambda d: d.find_element(By.XPATH,'//*[@id="report_status_chzn"]')) 
+        statusFind.click()
+        statusFind = driver.find_element(By.XPATH,'//*[@id="report_status_chzn"]/div/div/input')
+        print(statusFind.accessible_name)
+        statusFind.send_keys("laudados" + Keys.ENTER)
+        fluxoFinder = driver.find_element(By.XPATH,'//*[@id="filtros"]/div[4]/div/span[2]/span[1]/span')
+        fluxoFinder.send_keys("birads 0" + ENTER)
+        fluxoFinder.send_keys("birads 1" + ENTER)
+        fluxoFinder.send_keys("birads 2" + ENTER)
+        driver.implicitly_wait(.3)
+        fluxoFinder.send_keys("birads 3" + ENTER)
+        fluxoFinder.send_keys("birads 4" + ENTER)
+        fluxoFinder.send_keys("birads 5" + ENTER)
+        fluxoFinder.send_keys("birads 6" + ENTER)
+        dateRangeFinder = driver.find_element(By.XPATH,'//*[@id="entre"]').click()
+        dateInit = driver.find_element(By.XPATH,'//*[@id="data_inicio"]')
+        dateEnd = driver.find_element(By.XPATH,'//*[@id="data_fim"]')
+        dateInit.send_keys('01/01/2022')#input('Coloque a data de inicio formatada dd/mm/aaaa:'))
+        dateEnd.send_keys('12/08/2022' + ENTER) #input('Coloque a data de fim formatada dd/mm/aaaa:') + ENTER)
+        submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').send_keys(ENTER)
+    sleep(5)
+    driver.execute_script("window.scrollTo(0, 0)")
+    weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-check")
+    driver.execute_script("arguments[0].click();",weirdClass)
+    #checkAll = driver.find_element(By.XPATH,'//*[@id="check_all"]').click()
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
     getTags = driver.find_element(By.XPATH,'//*[@id="report-table-content"]/div[6]/div/div[2]/button[3]').click()
-    
+    #breakpoint()
+    return driver
+
+def move_to_next_page(driver: webdriver.Chrome, i) -> webdriver.Chrome:
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+    print(i)
+    if i == 0:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[3]/div/div[5]/a[3]').click()
+    elif i == 1:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[3]/div/div[5]/a[5]').click() 
+    elif i == 2 or i == 39 or i == 3:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[3]/div/div[5]/a[6]').click()
+    else:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[3]/div/div[5]/a[7]').click()   
+
+    driver.execute_script("window.scrollTo(0, 0)")
+
 def get_Biopsy(driver:webdriver.Chrome) -> webdriver.Chrome:
     """
     Download core biopsy of today.
@@ -161,7 +193,12 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     
     originalWindow = driver.current_window_handle
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
+    print(weirdClass)
     driver.execute_script("arguments[0].click();",weirdClass)
+    sleep(5)
+
+    driver.implicitly_wait(5)
+
 
     #at this point, we enter the Laudo 
     for window_handle in driver.window_handles:
@@ -235,9 +272,10 @@ def send_Electro(driver:webdriver.Chrome, date) -> None:
     patNameJPG = patName+'.jpg'
     fullPath = path + patNameJPG
     try:
-        breakpoint()
+        #breakpoint()
         upload = drag_and_drop_file(dropzone, fullPath) #faz o upload do ANEXO
-        waitForGreenTick = WebDriverWait(driver,5,2).until(lambda d: driver.find_element(By.XPATH,'/html/body/div[7]/div/div/form/div[2]/div[3]').is_displayed())
+        driver.implicitly_wait(2)
+        #waitForGreenTick = WebDriverWait(driver,5,2).until(lambda d: driver.find_element(By.XPATH,'/html/body/div[7]/div/div/form/div[2]/div[3]').is_displayed())
         leaveDropzone(driver)
         driver.refresh()
         #neglect_responsible(driver)
@@ -253,7 +291,7 @@ def send_Electro(driver:webdriver.Chrome, date) -> None:
         
     except InvalidArgumentException:
         print(f'Paciente {patName} não encontrado no armazenamento')
-        notfound.append(patName)
+        notfound.append(patName) #TODO #4
         leaveDropzone(driver)
         nextArrow(driver)
         send_Electro(driver,date)        
@@ -263,7 +301,6 @@ def send_Electro(driver:webdriver.Chrome, date) -> None:
         print(f'Tempo de espera atingiu o limite. Tentando fazer o upload do mesmo paciente mais uma vez.')
         send_Electro(driver,date)
     finally:
-
         return None
 
 def addImage(driver, fullPath):
@@ -273,6 +310,8 @@ def addImage(driver, fullPath):
         dropzone2 = driver.find_element(By.ID,'dropzone-master')
         upload2 = drag_and_drop_file(dropzone2, fullPath)
         print(f'Dropzone da imagem encontrado.')
+        #driver.implicitly_wait(5)
+        sleep(4)
     except TimeoutException:
         print('Não consegui encontrar o botão verde da IMAGEM')
     finally:
@@ -299,7 +338,7 @@ def get_patName(driver):
 
 def neglect_responsible(driver):
     try:
-        WebDriverWait(driver,2,5).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
+        WebDriverWait(driver,1,3).until(lambda d: driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').is_displayed())
         neglectResponsible = driver.find_element(By.XPATH,'//*[@id="simplemodal-overlay"]').click()
     except TimeoutException:
         print("Responsável não encontrado!")
@@ -312,16 +351,27 @@ def nextArrow(driver):
     nextArrow = driver.find_element(By.XPATH,'//*[@id="next"]').click()
 
 def moveDone(done:dict):
+    count_total = 0
+    #moved = []
     try:
-        fullpath = list(done.values())[0]
-        donePath = re.search('.+(?:FINALIZADO)', fullpath)
-        if not os.path.exists(donePath[0]):
-            os.mkdir(donePath[0])
+        creates_FINALIZADO(done)
         for source,destination in done.items():
             shutil.move(source,destination)
-        print(f'{len(done)} pacientes movido para a pasta de finalizados.')
+            count_total +=1
+            #done.pop()
+        print(f'{count_total} pacientes movido para a pasta de finalizados.')
     except IndexError:
         print('Nenhum paciente foi finalizado')
+    except FileNotFoundError as exp:
+        print(f'Aconteceu um erro: {exp}')
+
+def creates_FINALIZADO(done):
+    fullpath_first_patient = list(done.values())[0]
+        #breakpoint()
+    donePath_first_patient = re.search('.+(?:FINALIZADO)', fullpath_first_patient)
+    if not os.path.exists(donePath_first_patient[0]): #creates 
+        os.mkdir(donePath_first_patient[0])
+        #moveDone(done)
 
 def pipeline(date) -> Tuple[list,list]:
     "Runs the pipeline. Returns the patients that were not found and the ones that are done."
@@ -334,7 +384,6 @@ def pipeline(date) -> Tuple[list,list]:
     moveDone(finalizado_path)
     return notfound,finalizado_name
 
-
 if __name__ == '__main__':
     
     notfound = []
@@ -344,9 +393,6 @@ if __name__ == '__main__':
         driver = login_proradis()
         driver.maximize_window()
         driver = enter_Laudo_ecg(driver)
-        print('Não encontrados:')
-        print(notfound)
-        moveDone(finalizado_path)
     except KeyboardInterrupt:
         print(notfound)
         moveDone(finalizado_path)
@@ -357,6 +403,13 @@ if __name__ == '__main__':
         #moveDone(finalizado)
         pass
     finally:
+        print('Não encontrados:')
         print(notfound)
         moveDone(finalizado_path)
         print(f'Lista de pacientes finalizada.{len(finalizado_path)} finalizados. {len(notfound)} não encontrados.')
+    # driver = login_proradis()
+    # for i in range(int((3939/100))+1):
+    #     get_Biradis(driver, i)
+    #     sleep(2)
+    #     move_to_next_page(driver, i)
+    #     #sleep(5)
