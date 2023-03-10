@@ -74,10 +74,10 @@ def login_proradis() -> webdriver.Chrome:
     chrome_options.add_argument("--ignore-certificate-errors")
     prefs = {"download.default_directory" : "C:\Biradis"}
     chrome_options.add_experimental_option("prefs",prefs)                        #ENABLE THIS TO ADJUST THE DOWNLOAD DIRECTORY
-    #chrome_options.add_experimental_option("detach",True)                       #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
+        #chrome_options.add_experimental_option("detach",True)                       #ENABLE THIS TO HOLD THE SERVICE AFTER FINISHING THE JOB
     
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    driver.get("https://proradis.uncisal.edu.br")
+    driver.get("https://cedim.smartris.com.br")
     userInput = driver.find_element(by=By.NAME,value="username")
     userInput.send_keys(USERNAME)
     passInput = driver.find_element(By.NAME,"password")
@@ -188,8 +188,8 @@ def enter_Laudo_ecg(driver:webdriver.Chrome) -> Tuple[webdriver.Chrome,list]:
     
     submitBtn = driver.find_element(By.XPATH,'//*[@id="full_search"]').click()
     sleep(5)
-    driver.implicitly_wait(10)
-    WebDriverWait(driver,35,300,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
+    # driver.implicitly_wait(10)
+    # WebDriverWait(driver,3,1,(StaleElementReferenceException)).until(lambda d:driver.find_element(By.XPATH,'//*[@id="vApp"]/div[5]/div').is_displayed())
     
     originalWindow = driver.current_window_handle
     weirdClass  = driver.find_element(By.CSS_SELECTOR,".report-line.odd")
